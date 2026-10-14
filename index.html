@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NCDs Geo-Tagger (สำหรับ อสม.)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- นำเข้า LIFF SDK -->
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        body { font-family: 'Prompt', sans-serif; background-color: #f8fafc; }
+        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="text-slate-800 pb-10">
+
+    <header class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md sticky top-0 z-50">
+        <div class="px-5 py-4 flex items-center space-x-3">
+            <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl">
+                <i class="fa-solid fa-map-location-dot"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg leading-tight">NCDs Geo-Tagger</h1>
+                <p class="text-xs text-emerald-100">ระบบบันทึกพิกัดสำหรับ อสม.</p>
+            </div>
+        </div>
+    </header>
+
+    <main class="px-4 mt-6 max-w-md mx-auto space-y-5">
+        
+        <!-- ================= SECTION 1: Loading ================= -->
+        <div id="loadingSection" class="glass p-8 rounded-2xl shadow-sm border border-slate-200 text-center animate-fade-in flex flex-col items-center justify-center min-h-[300px]">
+            <i class="fa-solid fa-circle-notch fa-spin text-4xl text-emerald-500 mb-4"></i>
+            <h2 class="font-bold text-slate-700 text-lg">กำลังเชื่อมต่อระบบ...</h2>
+            <p class="text-sm text-slate-500 mt-2">กรุณารอสักครู่ ระบบกำลังตรวจสอบข้อมูล อสม.</p>
+        </div>
+
+        <!-- ================= SECTION 2: Register Form ================= -->
+        <div id="registerSection" class="hidden glass p-5 rounded-2xl shadow-sm border border-slate-200 animate-fade-in">
+            <div class="text-center mb-5">
+                <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xl mx-auto mb-2"><i class="fa-solid fa-id-card"></i></div>
+                <h2 class="font-bold text-slate-700 text-lg">ลงทะเบียน อสม. ใหม่</h2>
+                <p class="text-xs text-slate-500">กรุณากรอกข้อมูลเพื่อเข้าใช้งานระบบปักหมุด</p>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">ชื่อ-สกุล อสม. <span class="text-rose-500">*</span></label>
+                    <input type="text" id="regName" placeholder="เช่น นางสมศรี ใจดี" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500 outline-none text-sm transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">เบอร์โทรศัพท์ <span class="text-rose-500">*</span></label>
+                    <input type="tel" id="regPhone" placeholder="08X-XXX-XXXX" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500 outline-none text-sm transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">หมู่ที่รับผิดชอบหลัก <span class="text-rose-500">*</span></label>
+                    <select id="regMoo" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500 outline-none text-sm transition appearance-none">
+                        <option value="">-- เลือกหมู่ --</option>
+                        <option value="1">หมู่ 1</option><option value="2">หมู่ 2</option><option value="3">หมู่ 3</option>
+                        <option value="4">หมู่ 4</option><option value="5">หมู่ 5</option><option value="6">หมู่ 6</option>
+                        <option value="7">หมู่ 7</option><option value="8">หมู่ 8</option><option value="9">หมู่ 9</option><option value="10">หมู่ 10</option>
+                    </select>
+                </div>
+                <button id="btnRegister" onclick="submitRegistration()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl shadow-md transition font-bold text-sm flex items-center justify-center mt-2">
+                    <span id="btnRegText">ยืนยันลงทะเบียน</span>
+                    <i id="btnRegSpinner" class="fa-solid fa-circle-notch fa-spin hidden ml-2"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- ================= SECTION 3: Main App (ค้นหาและปักหมุด) ================= -->
+        <div id="mainSection" class="hidden space-y-4 animate-fade-in">
+            
+            <!-- ป้ายชื่อ อสม. -->
+            <div class="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 p-4 rounded-2xl flex justify-between items-center shadow-sm">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-lg"><i class="fa-solid fa-user-nurse"></i></div>
+                    <div>
+                        <p class="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">ผู้ปฏิบัติงาน (อสม.)</p>
+                        <p id="displayOsmName" class="font-bold text-slate-700 text-sm">-</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span id="displayOsmMoo" class="bg-emerald-500 text-white px-2.5 py-1 rounded-lg text-xs font-bold shadow-sm">หมู่ -</span>
+                </div>
+            </div>
+
+            <!-- กล่องค้นหาผู้ป่วย -->
+            <div class="glass p-5 rounded-2xl shadow-sm border border-slate-200">
+                <h2 class="font-bold text-slate-700 mb-3 flex items-center text-sm border-b border-slate-100 pb-2">
+                    <i class="fa-solid fa-magnifying-glass text-blue-500 mr-2"></i> 1. ค้นหาข้อมูลผู้ป่วย
+                </h2>
+                <div class="flex space-x-2">
+                    <input type="text" id="searchPid" placeholder="กรอกเลข PID หรือ HN..." class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none text-sm transition">
+                    <button id="btnSearch" onclick="searchPatient()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl shadow-md transition font-bold text-sm shrink-0 flex items-center justify-center min-w-[80px]">
+                        <span id="btnSearchText">ค้นหา</span>
+                        <i id="btnSearchSpinner" class="fa-solid fa-circle-notch fa-spin hidden"></i>
+                    </button>
+                </div>
+                
+                <!-- ผลลัพธ์การค้นหา -->
+                <div id="patientResultBox" class="hidden mt-4 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                    <div class="flex items-start space-x-3">
+                        <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-slate-400 shadow-sm shrink-0 border border-slate-100"><i class="fa-solid fa-user"></i></div>
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase">พบข้อมูลผู้ป่วย</p>
+                            <p id="resPtName" class="font-bold text-slate-700 text-sm">-</p>
+                            <p id="resPtAddress" class="text-xs text-slate-500 mt-0.5">-</p>
+                            <p id="resPtDisease" class="text-[10px] text-rose-500 font-semibold mt-1 bg-rose-50 inline-block px-2 py-0.5 rounded border border-rose-100">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- กล่องปักหมุดและถ่ายรูป (จะถูกล็อคไว้จนกว่าจะค้นหาเจอ) -->
+            <div id="captureBox" class="glass p-5 rounded-2xl shadow-sm border border-slate-200 opacity-50 pointer-events-none transition-all duration-300">
+                <h2 class="font-bold text-slate-700 mb-4 flex items-center text-sm border-b border-slate-100 pb-2">
+                    <i class="fa-solid fa-location-crosshairs text-emerald-500 mr-2"></i> 2. บันทึกพิกัดและรูปถ่าย
+                </h2>
+                
+                <div class="space-y-4">
+                    <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex flex-col items-center text-center">
+                        <button type="button" onclick="getGPSLocation()" class="bg-blue-500 hover:bg-blue-600 text-white px-5 py-3 rounded-xl shadow-md transition font-semibold flex items-center text-sm w-full justify-center">
+                            <i class="fa-solid fa-satellite-dish mr-2"></i> ดึงพิกัด GPS ปัจจุบัน
+                        </button>
+                        <p id="gpsStatus" class="text-xs text-slate-500 mt-3 font-medium bg-white px-3 py-1.5 rounded-lg border border-slate-200 w-full truncate">ยังไม่ได้ดึงพิกัด</p>
+                    </div>
+
+                    <div class="bg-amber-50/50 p-4 rounded-xl border border-amber-100 flex flex-col items-center text-center">
+                        <input type="file" id="photoInput" accept="image/*" capture="environment" class="hidden" onchange="handleImageUpload(event)">
+                        <button type="button" onclick="document.getElementById('photoInput').click()" class="bg-amber-500 hover:bg-amber-600 text-white px-5 py-3 rounded-xl shadow-md transition font-semibold flex items-center text-sm w-full justify-center">
+                            <i class="fa-solid fa-camera mr-2"></i> ถ่ายภาพหน้าบ้าน
+                        </button>
+                        <div id="imagePreviewContainer" class="mt-3 w-full hidden relative">
+                            <img id="previewImage" class="w-full h-40 object-cover rounded-xl border-2 border-white shadow-sm">
+                            <button onclick="clearImage()" class="absolute top-2 right-2 bg-rose-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-md">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                        <p id="photoStatus" class="text-xs text-slate-500 mt-3 font-medium w-full">ยังไม่ได้ถ่ายภาพ</p>
+                    </div>
+                </div>
+
+                <div id="statusMessage" class="hidden text-sm text-center font-bold p-3 rounded-xl mt-4"></div>
+
+                <button id="btnSubmitLocation" onclick="submitLocationData()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white py-4 rounded-2xl shadow-md transition font-bold text-sm flex items-center justify-center mt-5">
+                    <span id="btnSubmitLocText">ยืนยันการบันทึกข้อมูล</span>
+                    <i id="btnSubmitLocSpinner" class="fa-solid fa-circle-notch fa-spin hidden ml-2"></i>
+                </button>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // =========================================================================
+        // ตั้งค่าสำคัญ 2 อย่าง ที่นี่
+        // =========================================================================
+        const WEB_APP_URL = "วาง_WEB_APP_URL_ของ_Google_Apps_Script_ที่นี่"; 
+        const LIFF_ID = "วาง_LIFF_ID_ที่นี่"; // ถ้ายังไม่มี ใส่ค่าว่างไว้ก่อนได้ ระบบจะจำลอง ID ให้
+
+        // ตัวแปรสถานะ
+        let myLineId = "mock-user-12345"; // ID จำลองสำหรับทดสอบบนคอมพิวเตอร์
+        let osmData = { name: "", phone: "", moo: "" };
+        let currentPatientPid = "";
+        let currentLatLng = "";
+        let currentBase64Image = "";
+
+        // =========================================================================
+        // ฟังก์ชัน 1: เริ่มต้นแอปและตรวจสอบ LIFF
+        // =========================================================================
+        window.onload = async function() {
+            if (LIFF_ID && LIFF_ID !== "วาง_LIFF_ID_ที่นี่") {
+                try {
+                    await liff.init({ liffId: LIFF_ID });
+                    if (!liff.isLoggedIn()) {
+                        liff.login();
+                        return;
+                    }
+                    const profile = await liff.getProfile();
+                    myLineId = profile.userId;
+                    checkOsmRegistration();
+                } catch (error) {
+                    console.error("LIFF Init Error:", error);
+                    checkOsmRegistration(); // Fallback ทำงานต่อแม้อยู่นอก LINE
+                }
+            } else {
+                // กรณีทดสอบบนคอมพิวเตอร์ (ไม่มี LIFF)
+                checkOsmRegistration();
+            }
+        };
+
+        // =========================================================================
+        // ฟังก์ชัน 2: ตรวจสอบการลงทะเบียน อสม. (API Action: checkOsm)
+        // =========================================================================
+        function checkOsmRegistration() {
+            if (WEB_APP_URL === "วาง_WEB_APP_URL_ของ_Google_Apps_Script_ที่นี่") {
+                alert("กรุณาใส่ Web App URL ในโค้ดก่อนทดสอบครับ");
+                return;
+            }
+
+            fetch(WEB_APP_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: "checkOsm", lineUserId: myLineId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('loadingSection').classList.add('hidden');
+                
+                if (data.isRegistered) {
+                    // ลงทะเบียนแล้ว -> เปิดหน้าหลัก
+                    osmData = data.osmData;
+                    document.getElementById('displayOsmName').innerText = osmData.name;
+                    document.getElementById('displayOsmMoo').innerText = "หมู่ " + osmData.moo;
+                    document.getElementById('mainSection').classList.remove('hidden');
+                } else {
+                    // ยังไม่เคยลงทะเบียน -> เปิดหน้าฟอร์มลงทะเบียน
+                    document.getElementById('registerSection').classList.remove('hidden');
+                }
+            })
+            .catch(err => {
+                alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
+                console.error(err);
+            });
+        }
+
+        // =========================================================================
+        // ฟังก์ชัน 3: ลงทะเบียน อสม. (API Action: registerOsm)
+        // =========================================================================
+        function submitRegistration() {
+            const name = document.getElementById('regName').value.trim();
+            const phone = document.getElementById('regPhone').value.trim();
+            const moo = document.getElementById('regMoo').value;
+
+            if (!name || !phone || !moo) { alert("กรุณากรอกข้อมูลให้ครบทุกช่อง"); return; }
+
+            document.getElementById('btnRegText').innerText = "กำลังบันทึก...";
+            document.getElementById('btnRegSpinner').classList.remove('hidden');
+
+            fetch(WEB_APP_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: "registerOsm", lineUserId: myLineId, name: name, phone: phone, moo: moo })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    alert("ลงทะเบียนสำเร็จ! เข้าสู่ระบบปักหมุด");
+                    osmData = { name: name, phone: phone, moo: moo };
+                    document.getElementById('displayOsmName').innerText = osmData.name;
+                    document.getElementById('displayOsmMoo').innerText = "หมู่ " + osmData.moo;
+                    
+                    document.getElementById('registerSection').classList.add('hidden');
+                    document.getElementById('mainSection').classList.remove('hidden');
+                } else {
+                    alert(data.message);
+                }
+            })
+            .finally(() => {
+                document.getElementById('btnRegText').innerText = "ยืนยันลงทะเบียน";
+                document.getElementById('btnRegSpinner').classList.add('hidden');
+            });
+        }
+
+        // =========================================================================
+        // ฟังก์ชัน 4: ค้นหาผู้ป่วย (API Action: verifyPatient)
+        // =========================================================================
+        function searchPatient() {
+            const pid = document.getElementById('searchPid').value.trim();
+            if (!pid) { alert("กรุณากรอก PID หรือ HN"); return; }
+
+            document.getElementById('btnSearchText').innerText = "";
+            document.getElementById('btnSearchSpinner').classList.remove('hidden');
+            
+            // ล็อคปุ่มต่างๆ คืนก่อน
+            currentPatientPid = "";
+            document.getElementById('captureBox').classList.add('opacity-50', 'pointer-events-none');
+            document.getElementById('patientResultBox').classList.add('hidden');
+
+            fetch(WEB_APP_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: "verifyPatient", pid: pid })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.found) {
+                    currentPatientPid = pid;
+                    document.getElementById('resPtName').innerText = data.name;
+                    document.getElementById('resPtAddress').innerText = data.address;
+                    document.getElementById('resPtDisease').innerText = data.disease;
+                    
+                    document.getElementById('patientResultBox').classList.remove('hidden');
+                    document.getElementById('captureBox').classList.remove('opacity-50', 'pointer-events-none');
+                } else {
+                    alert("ไม่พบข้อมูลผู้ป่วยรหัสนี้ในระบบ (ตรวจสอบตัวเลขอีกครั้ง)");
+                }
+            })
+            .finally(() => {
+                document.getElementById('btnSearchText').innerText = "ค้นหา";
+                document.getElementById('btnSearchSpinner').classList.add('hidden');
+            });
+        }
+
+        // =========================================================================
+        // ฟังก์ชัน 5: ดึง GPS และ ถ่ายรูป (ทำงานบนฝั่งเครื่องผู้ใช้)
+        // =========================================================================
+        function getGPSLocation() {
+            const statusText = document.getElementById('gpsStatus');
+            statusText.innerText = "กำลังค้นหาสัญญาณ GPS...";
+            statusText.className = "text-xs text-blue-600 mt-3 font-bold bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 w-full animate-pulse";
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        currentLatLng = `${position.coords.latitude}, ${position.coords.longitude}`;
+                        statusText.innerText = `📍 พิกัด: ${currentLatLng}`;
+                        statusText.className = "text-xs text-emerald-600 mt-3 font-bold bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200 w-full";
+                    },
+                    (error) => {
+                        statusText.innerText = "❌ ไม่สามารถดึงพิกัดได้ กรุณาเปิด GPS และให้สิทธิ์เบราว์เซอร์";
+                        statusText.className = "text-xs text-rose-500 mt-3 font-bold bg-rose-50 px-3 py-1.5 rounded-lg border border-rose-200 w-full";
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            } else { alert("อุปกรณ์ไม่รองรับ GPS"); }
+        }
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0]; if (!file) return;
+            document.getElementById('photoStatus').innerText = "กำลังประมวลผลภาพ...";
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const scaleSize = 800 / img.width; // ย่อขนาดภาพให้ส่งไวขึ้น
+                    canvas.width = 800; canvas.height = img.height * scaleSize;
+                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                    currentBase64Image = canvas.toDataURL('image/jpeg', 0.7);
+                    
+                    document.getElementById('previewImage').src = currentBase64Image;
+                    document.getElementById('imagePreviewContainer').classList.remove('hidden');
+                    document.getElementById('photoStatus').innerText = "เตรียมรูปภาพเรียบร้อย";
+                    document.getElementById('photoStatus').className = "text-xs text-emerald-500 font-bold mt-3 w-full";
+                }
+                img.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+
+        function clearImage() {
+            currentBase64Image = ""; document.getElementById('photoInput').value = "";
+            document.getElementById('imagePreviewContainer').classList.add('hidden');
+            document.getElementById('photoStatus').innerText = "ยังไม่ได้ถ่ายภาพ";
+            document.getElementById('photoStatus').className = "text-xs text-slate-500 mt-3 font-medium w-full";
+        }
+
+        // =========================================================================
+        // ฟังก์ชัน 6: ส่งข้อมูลพิกัด (API Action: saveLocation)
+        // =========================================================================
+        function submitLocationData() {
+            const msgBox = document.getElementById('statusMessage');
+
+            if (!currentLatLng) {
+                msgBox.innerText = "⚠️ กรุณากดดึงพิกัด GPS ก่อนบันทึก";
+                msgBox.className = "text-sm text-center font-bold p-3 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 block";
+                return;
+            }
+
+            document.getElementById('btnSubmitLocText').innerText = "กำลังอัปโหลดข้อมูล...";
+            document.getElementById('btnSubmitLocSpinner').classList.remove('hidden');
+            document.getElementById('btnSubmitLocation').disabled = true;
+            msgBox.classList.add('hidden');
+
+            const payload = {
+                action: "saveLocation",
+                pid: currentPatientPid,
+                latLng: currentLatLng,
+                image: currentBase64Image,
+                osmName: osmData.name,
+                osmPhone: osmData.phone
+            };
+
+            fetch(WEB_APP_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    msgBox.innerText = "✅ บันทึกข้อมูลและพิกัดสำเร็จ!";
+                    msgBox.className = "text-sm text-center font-bold p-3 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200 block";
+                    
+                    // Reset ฟอร์ม
+                    setTimeout(() => {
+                        document.getElementById('searchPid').value = "";
+                        document.getElementById('patientResultBox').classList.add('hidden');
+                        document.getElementById('captureBox').classList.add('opacity-50', 'pointer-events-none');
+                        clearImage();
+                        document.getElementById('gpsStatus').innerText = "ยังไม่ได้ดึงพิกัด";
+                        document.getElementById('gpsStatus').className = "text-xs text-slate-500 mt-3 font-medium bg-white px-3 py-1.5 rounded-lg border border-slate-200 w-full truncate";
+                        currentLatLng = "";
+                        currentPatientPid = "";
+                        msgBox.classList.add('hidden');
+                    }, 3000);
+                } else {
+                    msgBox.innerText = "❌ " + data.message;
+                    msgBox.className = "text-sm text-center font-bold p-3 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 block";
+                }
+            })
+            .catch(error => {
+                msgBox.innerText = "❌ เกิดข้อผิดพลาดในการเชื่อมต่อ";
+                msgBox.className = "text-sm text-center font-bold p-3 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 block";
+            })
+            .finally(() => {
+                document.getElementById('btnSubmitLocText').innerText = "ยืนยันการบันทึกข้อมูล";
+                document.getElementById('btnSubmitLocSpinner').classList.add('hidden');
+                document.getElementById('btnSubmitLocation').disabled = false;
+            });
+        }
+    </script>
+</body>
+</html>

@@ -204,8 +204,17 @@
             document.getElementById('alertTitle').innerText = title;
             document.getElementById('alertMessage').innerText = message;
             
+            // ซ่อนปุ่มยกเลิกสำหรับ Alert ธรรมดา
+            document.getElementById('alertBtnCancel').classList.add('hidden');
+            document.getElementById('alertBtnDivider').classList.add('hidden');
+            btnConfirm.classList.remove('rounded-br-2xl');
+            btnConfirm.classList.add('rounded-b-2xl');
+            btnConfirm.onclick = closeCustomAlert; // คืนค่าการกดปุ่มให้ปิดปกติ
+            
             iconContainer.className = "absolute -top-10 w-20 h-20 rounded-full flex items-center justify-center shadow-lg border-4 border-white transition-all duration-500";
             btnConfirm.className = "flex-1 py-3 font-bold text-sm hover:bg-slate-50 rounded-b-2xl transition focus:outline-none";
+
+            // ... (โค้ดส่วนเงื่อนไข if (type === 'success') ด้านล่างคงเดิม) ...
 
             if (type === 'success') {
                 iconContainer.classList.add('bg-gradient-to-br', 'from-emerald-400', 'to-teal-500');
@@ -248,6 +257,52 @@
                 modal.classList.add('hidden');
                 modal.classList.remove('flex');
             }, 300);
+        }
+
+        // ฟังก์ชันสำหรับ Pop-up แบบมี 2 ปุ่ม (ยืนยัน / ยกเลิก)
+        function showConfirmAlert(title, message, confirmCallback, cancelCallback) {
+            const modal = document.getElementById('customAlertModal');
+            const box = document.getElementById('customAlertBox');
+            const iconContainer = document.getElementById('alertIconContainer');
+            const icon = document.getElementById('alertIcon');
+            const btnConfirm = document.getElementById('alertBtnConfirm');
+            const btnCancel = document.getElementById('alertBtnCancel');
+            const btnDivider = document.getElementById('alertBtnDivider');
+
+            document.getElementById('alertTitle').innerText = title;
+            document.getElementById('alertMessage').innerText = message;
+
+            // สไตล์ไอคอนคำถาม (สีฟ้า)
+            iconContainer.className = "absolute -top-10 w-20 h-20 rounded-full flex items-center justify-center shadow-lg border-4 border-white transition-all duration-500 bg-gradient-to-br from-blue-400 to-indigo-500";
+            icon.className = "fa-solid fa-circle-question text-4xl text-white animate-pulse";
+
+            // แสดงปุ่มยกเลิก และปรับมุมปุ่มยืนยัน
+            btnCancel.classList.remove('hidden');
+            btnDivider.classList.remove('hidden');
+            btnConfirm.classList.remove('rounded-b-2xl');
+            btnConfirm.classList.add('rounded-br-2xl', 'text-blue-600');
+            btnConfirm.innerText = "อัปเดตข้อมูล";
+
+            // ตั้งค่าการกดปุ่ม
+            btnConfirm.onclick = () => {
+                closeCustomAlert();
+                if(confirmCallback) confirmCallback();
+            };
+            btnCancel.onclick = () => {
+                closeCustomAlert();
+                if(cancelCallback) cancelCallback();
+            };
+
+            // แสดง Pop-up
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                box.classList.remove('scale-95');
+                box.classList.add('scale-100');
+                iconContainer.classList.add('scale-110');
+                setTimeout(() => iconContainer.classList.remove('scale-110'), 200);
+            }, 10);
         }
 
         // =========================================================================
@@ -349,7 +404,7 @@
         // =========================================================================
         // ฟังก์ชัน 4: ค้นหาผู้ป่วย (API Action: verifyPatient)
         // =========================================================================
-        function searchPatient() {
+       function searchPatient() {
             const pid = document.getElementById('searchPid').value.trim();
             if (!pid) { 
                 showCustomAlert('info', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอกเลข PID หรือ HN ก่อนค้นหา'); 
@@ -375,11 +430,34 @@
                     document.getElementById('resPtAddress').innerText = data.address;
                     document.getElementById('resPtDisease').innerText = data.disease;
                     
-                    document.getElementById('patientResultBox').classList.remove('hidden');
-                    document.getElementById('captureBox').classList.remove('opacity-50', 'pointer-events-none');
+                    if (data.hasLocation) {
+                        // กรณีมีพิกัดอยู่แล้ว -> เรียก Pop-up ถามยืนยัน
+                        showConfirmAlert(
+                            'พบพิกัดเดิมในระบบ',
+                            'ผู้ป่วยรายนี้มีการบันทึกพิกัดไว้แล้ว\nคุณต้องการอัปเดตข้อมูลทับของเดิมหรือไม่?',
+                            () => {
+                                // ถ้ากด "อัปเดตข้อมูล"
+                                document.getElementById('patientResultBox').classList.remove('hidden');
+                                document.getElementById('captureBox').classList.remove('opacity-50', 'pointer-events-none');
+                                document.getElementById('btnSubmitLocText').innerText = "อัปเดตทับข้อมูลเดิม";
+                            },
+                            () => {
+                                // ถ้ากด "ยกเลิก"
+                                document.getElementById('searchPid').value = "";
+                            }
+                        );
+                    } else {
+                        // กรณีคนไข้ใหม่ยังไม่มีพิกัด -> ทำงานปกติ
+                        document.getElementById('patientResultBox').classList.remove('hidden');
+                        document.getElementById('captureBox').classList.remove('opacity-50', 'pointer-events-none');
+                        document.getElementById('btnSubmitLocText').innerText = "ยืนยันการบันทึกข้อมูล";
+                    }
                 } else {
                     showCustomAlert('error', 'ไม่พบข้อมูล', 'ไม่พบข้อมูลผู้ป่วยรหัสนี้ในระบบ\nกรุณาตรวจสอบตัวเลขอีกครั้ง');
                 }
+            })
+            .catch(error => {
+                showCustomAlert('error', 'ข้อผิดพลาด', 'เกิดปัญหาในการค้นหา กรุณาลองใหม่อีกครั้ง');
             })
             .finally(() => {
                 document.getElementById('btnSearchText').innerText = "ค้นหา";

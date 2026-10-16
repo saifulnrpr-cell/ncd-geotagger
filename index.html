@@ -71,6 +71,36 @@
             </div>
         </div>
 
+        <!-- ================= หน้าต่าง: รออนุมัติ (Pending) ================= -->
+    <div id="pendingScreen" class="hidden flex-col items-center justify-center min-h-screen p-6 bg-slate-50 text-center relative z-50">
+        <div class="bg-white p-8 rounded-3xl shadow-xl border border-amber-100 max-w-sm w-full animate-[popIn_0.5s_ease-out]">
+            <div class="w-24 h-24 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                <i class="fa-solid fa-hourglass-half text-5xl animate-pulse"></i>
+            </div>
+            <h2 class="text-2xl font-black text-slate-800 mb-2">รอการอนุมัติ</h2>
+            <p class="text-sm text-slate-500 font-medium mb-6">ระบบได้รับข้อมูลการลงทะเบียนของคุณแล้ว<br>กรุณารอเจ้าหน้าที่ตรวจสอบสิทธิ์ค่ะ</p>
+            <div class="bg-amber-50 text-amber-600 px-4 py-3 rounded-xl text-xs font-bold border border-amber-200 text-left">
+                <i class="fa-solid fa-circle-info mr-1.5"></i> หากรอนาน กรุณาแจ้งเจ้าหน้าที่ รพ.สต. เพื่อเปิดสิทธิ์การใช้งานแผนที่
+            </div>
+            <button onclick="liff.closeWindow()" class="mt-6 w-full py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold shadow-sm transition">ปิดหน้าต่าง</button>
+        </div>
+    </div>
+
+    <!-- ================= หน้าต่าง: ไม่อนุมัติ (Rejected) ================= -->
+    <div id="rejectedScreen" class="hidden flex-col items-center justify-center min-h-screen p-6 bg-slate-50 text-center relative z-50">
+        <div class="bg-white p-8 rounded-3xl shadow-xl border border-rose-100 max-w-sm w-full animate-[popIn_0.5s_ease-out]">
+            <div class="w-24 h-24 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                <i class="fa-solid fa-ban text-5xl"></i>
+            </div>
+            <h2 class="text-2xl font-black text-slate-800 mb-2">ไม่อนุมัติการใช้งาน</h2>
+            <p class="text-sm text-slate-500 font-medium mb-6">ข้อมูลของคุณไม่ผ่านการตรวจสอบ<br>ระบบไม่อนุญาตให้เข้าถึงฐานข้อมูลผู้ป่วย</p>
+            <div class="bg-rose-50 text-rose-600 px-4 py-3 rounded-xl text-xs font-bold border border-rose-200 text-left">
+                <i class="fa-solid fa-phone mr-1.5"></i> กรุณาติดต่อเจ้าหน้าที่ รพ.สต. เพื่อตรวจสอบข้อมูลการลงทะเบียนอีกครั้ง
+            </div>
+            <button onclick="liff.closeWindow()" class="mt-6 w-full py-3 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold shadow-md transition">ปิดหน้าต่าง</button>
+        </div>
+    </div>
+
         <!-- ================= SECTION 2.5: Pending Approval ================= -->
         <div id="pendingSection" class="hidden glass p-8 rounded-2xl shadow-sm border border-amber-200 text-center animate-fade-in flex flex-col items-center justify-center min-h-[300px] bg-gradient-to-br from-white to-amber-50">
             <div class="w-20 h-20 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 border-4 border-white shadow-sm">
@@ -356,23 +386,38 @@
             })
             .then(res => res.json())
             .then(data => {
+                // ซ่อนหน้าจอทั้งหมดก่อน เพื่อเตรียมแสดงผลตามสถานะ
                 document.getElementById('loadingSection').classList.add('hidden');
+                document.getElementById('registerSection').classList.add('hidden');
+                document.getElementById('mainSection').classList.add('hidden');
+                document.getElementById('pendingSection').classList.add('hidden'); // ซ่อนหน้าต่างโหลดอันเก่า
+                document.getElementById('pendingScreen').classList.add('hidden');
+                document.getElementById('pendingScreen').classList.remove('flex');
+                document.getElementById('rejectedScreen').classList.add('hidden');
+                document.getElementById('rejectedScreen').classList.remove('flex');
                 
                 if (data.isRegistered) {
-                    if (data.isApproved) {
-                        // ลงทะเบียนแล้ว และ แอดมินอนุมัติแล้ว
+                    let status = data.status || "รออนุมัติ"; // รับค่าสถานะจาก gs.txt
+                    
+                    if (status === "รออนุมัติ") {
+                        // โชว์หน้าจอรออนุมัติ
+                        document.getElementById('pendingScreen').classList.remove('hidden');
+                        document.getElementById('pendingScreen').classList.add('flex');
+                    } 
+                    else if (status === "ไม่อนุมัติ") {
+                        // โชว์หน้าจอไม่อนุมัติ
+                        document.getElementById('rejectedScreen').classList.remove('hidden');
+                        document.getElementById('rejectedScreen').classList.add('flex');
+                    } 
+                    else {
+                        // อนุมัติแล้ว (หรือสถานะอื่นๆ) ให้เข้าหน้าปักหมุดปกติ
                         osmData = data.osmData;
                         document.getElementById('displayOsmName').innerText = osmData.name;
                         document.getElementById('displayOsmMoo').innerText = "หมู่ " + osmData.moo;
-                        
-                        document.getElementById('pendingSection').classList.add('hidden');
                         document.getElementById('mainSection').classList.remove('hidden');
-                    } else {
-                        // ลงทะเบียนแล้ว แต่รออนุมัติ
-                        document.getElementById('pendingSection').classList.remove('hidden');
                     }
                 } else {
-                    // ยังไม่เคยลงทะเบียน
+                    // ยังไม่เคยลงทะเบียน ให้โชว์หน้าฟอร์ม
                     document.getElementById('registerSection').classList.remove('hidden');
                 }
             })
@@ -407,7 +452,10 @@
                 if(data.success) {
                     showCustomAlert('success', 'ส่งข้อมูลสำเร็จ!', 'กรุณารอแอดมินอนุมัติการเข้าใช้งาน');
                     document.getElementById('registerSection').classList.add('hidden');
-                    document.getElementById('pendingSection').classList.remove('hidden');
+                    
+                    // เปลี่ยนไปแสดงหน้าจอ "รออนุมัติ" อันใหม่ (ดีไซน์ใหม่)
+                    document.getElementById('pendingScreen').classList.remove('hidden');
+                    document.getElementById('pendingScreen').classList.add('flex');
                 }else {
                     showCustomAlert('error', 'เกิดข้อผิดพลาด', data.message);
                 }

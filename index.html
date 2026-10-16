@@ -14,9 +14,36 @@
         .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
         .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ================= NEON PROGRESS BAR ================= */
+        .neon-progress-container {
+            width: 100%; height: 28px; border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 4px; padding: 2px; position: relative;
+            background: rgba(0, 0, 0, 0.5); box-shadow: 0 0 10px rgba(168, 85, 247, 0.2);
+        }
+        .neon-progress-fill {
+            height: 100%; width: 0%; border-radius: 2px;
+            background: linear-gradient(90deg, #8b5cf6, #d946ef);
+            box-shadow: 0 0 15px rgba(217, 70, 239, 0.8);
+            transition: width 0.3s ease-out;
+        }
+        .neon-text-glow { text-shadow: 0 0 8px rgba(255, 255, 255, 0.5); }
+
     </style>
 </head>
 <body class="text-slate-800 pb-10">
+
+  <!-- ================= NEON PROGRESS LOADING OVERLAY ================= -->
+    <div id="globalProgressOverlay" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[10000] hidden flex-col items-center justify-center p-6 transition-opacity duration-300 opacity-0">
+        <div class="flex flex-col items-center w-full max-w-[400px] animate-[popIn_0.4s_ease-out]">
+            <div class="flex justify-between w-full mb-3 px-1 items-end">
+                <span id="progressTitle" class="text-white font-light tracking-[0.2em] neon-text-glow text-lg uppercase">LOADING...</span>
+                <span id="progressPercent" class="text-white font-bold text-xl neon-text-glow">0%</span>
+            </div>
+            <div class="neon-progress-container"><div id="progressFill" class="neon-progress-fill"></div></div>
+            <p id="progressSubtitle" class="text-slate-400 text-xs mt-5 font-medium animate-pulse tracking-wide">กรุณารอสักครู่ ระบบกำลังทำงาน...</p>
+        </div>
+    </div>
 
     <header class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md sticky top-0 z-50">
         <div class="px-5 py-4 flex items-center space-x-3">
@@ -32,12 +59,7 @@
 
     <main class="px-4 mt-6 max-w-md mx-auto space-y-5">
         
-        <!-- ================= SECTION 1: Loading ================= -->
-        <div id="loadingSection" class="glass p-8 rounded-2xl shadow-sm border border-slate-200 text-center animate-fade-in flex flex-col items-center justify-center min-h-[300px]">
-            <i class="fa-solid fa-circle-notch fa-spin text-4xl text-emerald-500 mb-4"></i>
-            <h2 class="font-bold text-slate-700 text-lg">กำลังเชื่อมต่อระบบ...</h2>
-            <p class="text-sm text-slate-500 mt-2">กรุณารอสักครู่ ระบบกำลังตรวจสอบข้อมูล อสม.</p>
-        </div>
+        
 
         <!-- ================= SECTION 2: Register Form ================= -->
         <div id="registerSection" class="hidden glass p-5 rounded-2xl shadow-sm border border-slate-200 animate-fade-in">
@@ -380,48 +402,49 @@
                 return;
             }
 
+            // เรียก Loading นีออน
+            showProgressLoading('กำลังตรวจสอบข้อมูล อสม...');
+
             fetch(WEB_APP_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: "checkOsm", lineUserId: myLineId })
+                method: 'POST', body: JSON.stringify({ action: "checkOsm", lineUserId: myLineId })
             })
             .then(res => res.json())
             .then(data => {
-                // ซ่อนหน้าจอทั้งหมดก่อน เพื่อเตรียมแสดงผลตามสถานะ
-                document.getElementById('loadingSection').classList.add('hidden');
+                hideProgressLoading(); // ซ่อน Loading นีออน
+
+                // (ลบการทำงานของ #loadingSection ออก)
+                // document.getElementById('loadingSection').classList.add('hidden');
+                
                 document.getElementById('registerSection').classList.add('hidden');
                 document.getElementById('mainSection').classList.add('hidden');
-                document.getElementById('pendingSection').classList.add('hidden'); // ซ่อนหน้าต่างโหลดอันเก่า
+                document.getElementById('pendingSection').classList.add('hidden'); 
                 document.getElementById('pendingScreen').classList.add('hidden');
                 document.getElementById('pendingScreen').classList.remove('flex');
                 document.getElementById('rejectedScreen').classList.add('hidden');
                 document.getElementById('rejectedScreen').classList.remove('flex');
                 
                 if (data.isRegistered) {
-                    let status = data.status || "รออนุมัติ"; // รับค่าสถานะจาก gs.txt
-                    
+                    let status = data.status || "รออนุมัติ";
                     if (status === "รออนุมัติ") {
-                        // โชว์หน้าจอรออนุมัติ
                         document.getElementById('pendingScreen').classList.remove('hidden');
                         document.getElementById('pendingScreen').classList.add('flex');
                     } 
                     else if (status === "ไม่อนุมัติ") {
-                        // โชว์หน้าจอไม่อนุมัติ
                         document.getElementById('rejectedScreen').classList.remove('hidden');
                         document.getElementById('rejectedScreen').classList.add('flex');
                     } 
                     else {
-                        // อนุมัติแล้ว (หรือสถานะอื่นๆ) ให้เข้าหน้าปักหมุดปกติ
                         osmData = data.osmData;
                         document.getElementById('displayOsmName').innerText = osmData.name;
                         document.getElementById('displayOsmMoo').innerText = "หมู่ " + osmData.moo;
                         document.getElementById('mainSection').classList.remove('hidden');
                     }
                 } else {
-                    // ยังไม่เคยลงทะเบียน ให้โชว์หน้าฟอร์ม
                     document.getElementById('registerSection').classList.remove('hidden');
                 }
             })
             .catch(err => {
+                hideProgressLoading(); // ซ่อน Loading หากมี Error
                 showCustomAlert('error', 'ข้อผิดพลาดการเชื่อมต่อ', 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์\nกรุณาลองใหม่อีกครั้ง');
                 console.error(err);
             });
@@ -436,98 +459,80 @@
             const moo = document.getElementById('regMoo').value;
 
             if (!name || !phone || !moo) { 
-                showCustomAlert('info', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอกข้อมูลให้ครบทุกช่อง'); 
-                return; 
+                showCustomAlert('info', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอกข้อมูลให้ครบทุกช่อง'); return; 
             }
 
-            document.getElementById('btnRegText').innerText = "กำลังบันทึก...";
-            document.getElementById('btnRegSpinner').classList.remove('hidden');
-
+            // เรียก Loading นีออน แทนคำว่า "กำลังบันทึก" บนปุ่ม
+            showProgressLoading('กำลังส่งข้อมูลลงทะเบียน...');
+            
             fetch(WEB_APP_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: "registerOsm", lineUserId: myLineId, name: name, phone: phone, moo: moo })
+                method: 'POST', body: JSON.stringify({ action: "registerOsm", lineUserId: myLineId, name: name, phone: phone, moo: moo })
             })
             .then(res => res.json())
             .then(data => {
+                hideProgressLoading(); // ซ่อน Loading
+                
                 if(data.success) {
-                    showCustomAlert('success', 'ส่งข้อมูลสำเร็จ!', 'กรุณารอแอดมินอนุมัติการเข้าใช้งาน');
+                    setTimeout(() => showCustomAlert('success', 'ส่งข้อมูลสำเร็จ!', 'กรุณารอแอดมินอนุมัติการเข้าใช้งาน'), 500);
                     document.getElementById('registerSection').classList.add('hidden');
-                    
-                    // เปลี่ยนไปแสดงหน้าจอ "รออนุมัติ" อันใหม่ (ดีไซน์ใหม่)
                     document.getElementById('pendingScreen').classList.remove('hidden');
                     document.getElementById('pendingScreen').classList.add('flex');
-                }else {
-                    showCustomAlert('error', 'เกิดข้อผิดพลาด', data.message);
+                } else {
+                    setTimeout(() => showCustomAlert('error', 'เกิดข้อผิดพลาด', data.message), 500);
                 }
             })
-            .finally(() => {
-                document.getElementById('btnRegText').innerText = "ยืนยันลงทะเบียน";
-                document.getElementById('btnRegSpinner').classList.add('hidden');
-            });
+            .catch(err => hideProgressLoading());
         }
+
 
         // =========================================================================
         // ฟังก์ชัน 4: ค้นหาผู้ป่วย (API Action: verifyPatient)
         // =========================================================================
        function searchPatient() {
             const pid = document.getElementById('searchPid').value.trim();
-            if (!pid) { 
-                showCustomAlert('info', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอกเลข PID หรือ HN ก่อนค้นหา'); 
-                return; 
-            }
+            if (!pid) { showCustomAlert('info', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอกเลข PID หรือ HN ก่อนค้นหา'); return; }
 
-            document.getElementById('btnSearchText').innerText = "";
-            document.getElementById('btnSearchSpinner').classList.remove('hidden');
+            // เรียก Loading นีออน แทนที่ Spinner ในปุ่มค้นหา
+            showProgressLoading('กำลังค้นหาข้อมูลผู้ป่วย...');
             
             currentPatientPid = "";
             document.getElementById('captureBox').classList.add('opacity-50', 'pointer-events-none');
             document.getElementById('patientResultBox').classList.add('hidden');
 
             fetch(WEB_APP_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: "verifyPatient", pid: pid })
+                method: 'POST', body: JSON.stringify({ action: "verifyPatient", pid: pid })
             })
             .then(res => res.json())
             .then(data => {
-                if (data.found) {
-                    currentPatientPid = pid;
-                    document.getElementById('resPtName').innerText = data.name;
-                    document.getElementById('resPtAddress').innerText = data.address;
-                    document.getElementById('resPtDisease').innerText = data.disease;
-                    
-                    if (data.hasLocation) {
-                        // กรณีมีพิกัดอยู่แล้ว -> เรียก Pop-up ถามยืนยัน
-                        showConfirmAlert(
-                            'พบพิกัดเดิมในระบบ',
-                            'ผู้ป่วยรายนี้มีการบันทึกพิกัดไว้แล้ว\nคุณต้องการอัปเดตข้อมูลทับของเดิมหรือไม่?',
-                            () => {
-                                // ถ้ากด "อัปเดตข้อมูล"
-                                document.getElementById('patientResultBox').classList.remove('hidden');
-                                document.getElementById('captureBox').classList.remove('opacity-50', 'pointer-events-none');
-                                document.getElementById('btnSubmitLocText').innerText = "อัปเดตทับข้อมูลเดิม";
-                            },
-                            () => {
-                                // ถ้ากด "ยกเลิก"
-                                document.getElementById('searchPid').value = "";
-                            }
-                        );
+                hideProgressLoading(); // ซ่อน Loading นีออน
+
+                setTimeout(() => {
+                    if (data.found) {
+                        currentPatientPid = pid;
+                        document.getElementById('resPtName').innerText = data.name;
+                        document.getElementById('resPtAddress').innerText = data.address;
+                        document.getElementById('resPtDisease').innerText = data.disease;
+                        
+                        if (data.hasLocation) {
+                            showConfirmAlert('พบพิกัดเดิมในระบบ', 'ผู้ป่วยรายนี้มีการบันทึกพิกัดไว้แล้ว\nคุณต้องการอัปเดตข้อมูลทับของเดิมหรือไม่?',
+                                () => {
+                                    document.getElementById('patientResultBox').classList.remove('hidden');
+                                    document.getElementById('captureBox').classList.remove('opacity-50', 'pointer-events-none');
+                                    document.getElementById('btnSubmitLocText').innerText = "อัปเดตทับข้อมูลเดิม";
+                                },
+                                () => { document.getElementById('searchPid').value = ""; }
+                            );
+                        } else {
+                            document.getElementById('patientResultBox').classList.remove('hidden');
+                            document.getElementById('captureBox').classList.remove('opacity-50', 'pointer-events-none');
+                            document.getElementById('btnSubmitLocText').innerText = "ยืนยันการบันทึกข้อมูล";
+                        }
                     } else {
-                        // กรณีคนไข้ใหม่ยังไม่มีพิกัด -> ทำงานปกติ
-                        document.getElementById('patientResultBox').classList.remove('hidden');
-                        document.getElementById('captureBox').classList.remove('opacity-50', 'pointer-events-none');
-                        document.getElementById('btnSubmitLocText').innerText = "ยืนยันการบันทึกข้อมูล";
+                        showCustomAlert('error', 'ไม่พบข้อมูล', 'ไม่พบข้อมูลผู้ป่วยรหัสนี้ในระบบ\nกรุณาตรวจสอบตัวเลขอีกครั้ง');
                     }
-                } else {
-                    showCustomAlert('error', 'ไม่พบข้อมูล', 'ไม่พบข้อมูลผู้ป่วยรหัสนี้ในระบบ\nกรุณาตรวจสอบตัวเลขอีกครั้ง');
-                }
+                }, 500);
             })
-            .catch(error => {
-                showCustomAlert('error', 'ข้อผิดพลาด', 'เกิดปัญหาในการค้นหา กรุณาลองใหม่อีกครั้ง');
-            })
-            .finally(() => {
-                document.getElementById('btnSearchText').innerText = "ค้นหา";
-                document.getElementById('btnSearchSpinner').classList.add('hidden');
-            });
+            .catch(err => hideProgressLoading());
         }
 
         // =========================================================================
@@ -591,56 +596,85 @@
         // ฟังก์ชัน 6: ส่งข้อมูลพิกัด (API Action: saveLocation)
         // =========================================================================
         function submitLocationData() {
-            if (!currentLatLng) {
-                showCustomAlert('info', 'ข้อมูลไม่ครบ', 'กรุณากดปุ่ม "ดึงพิกัด GPS ปัจจุบัน" ก่อนบันทึกข้อมูล');
-                return;
-            }
+            if (!currentLatLng) { showCustomAlert('info', 'ข้อมูลไม่ครบ', 'กรุณากดปุ่ม "ดึงพิกัด GPS ปัจจุบัน" ก่อนบันทึกข้อมูล'); return; }
 
-            document.getElementById('btnSubmitLocText').innerText = "กำลังอัปโหลดข้อมูล...";
-            document.getElementById('btnSubmitLocSpinner').classList.remove('hidden');
+            // เรียก Loading นีออน 
+            showProgressLoading('กำลังอัปโหลดพิกัดและรูปภาพ...');
             document.getElementById('btnSubmitLocation').disabled = true;
 
-            const payload = {
-                action: "saveLocation",
-                pid: currentPatientPid,
-                latLng: currentLatLng,
-                image: currentBase64Image,
-                osmName: osmData.name,
-                osmPhone: osmData.phone
-            };
+            const payload = { action: "saveLocation", pid: currentPatientPid, latLng: currentLatLng, image: currentBase64Image, osmName: osmData.name, osmPhone: osmData.phone };
 
-            fetch(WEB_APP_URL, {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            })
+            fetch(WEB_APP_URL, { method: 'POST', body: JSON.stringify(payload) })
             .then(res => res.json())
             .then(data => {
-                if (data.success) {
-                    showCustomAlert('success', 'บันทึกสำเร็จ!', 'บันทึกข้อมูลและพิกัดผู้ป่วยเรียบร้อยแล้ว');
-                    
-                    // Reset ฟอร์ม
-                    setTimeout(() => {
-                        document.getElementById('searchPid').value = "";
-                        document.getElementById('patientResultBox').classList.add('hidden');
-                        document.getElementById('captureBox').classList.add('opacity-50', 'pointer-events-none');
-                        clearImage();
-                        document.getElementById('gpsStatus').innerText = "ยังไม่ได้ดึงพิกัด";
-                        document.getElementById('gpsStatus').className = "text-xs text-slate-500 mt-3 font-medium bg-white px-3 py-1.5 rounded-lg border border-slate-200 w-full truncate";
-                        currentLatLng = "";
-                        currentPatientPid = "";
-                    }, 2000);
-                } else {
-                    showCustomAlert('error', 'เกิดข้อผิดพลาด', data.message);
-                }
+                hideProgressLoading(); // ซ่อน Loading นีออน
+                
+                setTimeout(() => {
+                    if (data.success) {
+                        showCustomAlert('success', 'บันทึกสำเร็จ!', 'บันทึกข้อมูลและพิกัดผู้ป่วยเรียบร้อยแล้ว');
+                        
+                        // Reset ฟอร์ม
+                        setTimeout(() => {
+                            document.getElementById('searchPid').value = "";
+                            document.getElementById('patientResultBox').classList.add('hidden');
+                            document.getElementById('captureBox').classList.add('opacity-50', 'pointer-events-none');
+                            clearImage();
+                            document.getElementById('gpsStatus').innerText = "ยังไม่ได้ดึงพิกัด";
+                            document.getElementById('gpsStatus').className = "text-xs text-slate-500 mt-3 font-medium bg-white px-3 py-1.5 rounded-lg border border-slate-200 w-full truncate";
+                            currentLatLng = ""; currentPatientPid = "";
+                        }, 2000);
+                    } else {
+                        showCustomAlert('error', 'เกิดข้อผิดพลาด', data.message);
+                    }
+                }, 500);
             })
             .catch(error => {
-                showCustomAlert('error', 'ข้อผิดพลาดการเชื่อมต่อ', 'เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง');
+                hideProgressLoading();
+                setTimeout(() => showCustomAlert('error', 'ข้อผิดพลาดการเชื่อมต่อ', 'เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง'), 500);
             })
-            .finally(() => {
-                document.getElementById('btnSubmitLocText').innerText = "ยืนยันการบันทึกข้อมูล";
-                document.getElementById('btnSubmitLocSpinner').classList.add('hidden');
-                document.getElementById('btnSubmitLocation').disabled = false;
-            });
+            .finally(() => { document.getElementById('btnSubmitLocation').disabled = false; });
+        }
+
+        let progressInterval;
+        
+        function showProgressLoading(title = "LOADING...") {
+            const overlay = document.getElementById('globalProgressOverlay');
+            const fill = document.getElementById('progressFill');
+            const percentText = document.getElementById('progressPercent');
+            
+            document.getElementById('progressTitle').innerText = title;
+            fill.style.width = '0%'; percentText.innerText = '0%';
+            
+            overlay.classList.remove('hidden'); overlay.classList.add('flex');
+            setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+
+            let currentProgress = 0; clearInterval(progressInterval);
+            
+            progressInterval = setInterval(() => {
+                let step = Math.random() * 5; 
+                if (currentProgress > 60) step = Math.random() * 2; 
+                if (currentProgress > 85) step = Math.random() * 0.5; 
+                
+                currentProgress += step;
+                if (currentProgress > 95) currentProgress = 95; 
+                
+                fill.style.width = currentProgress + '%';
+                percentText.innerText = Math.floor(currentProgress) + '%';
+            }, 150);
+        }
+
+        function hideProgressLoading() {
+            const overlay = document.getElementById('globalProgressOverlay');
+            const fill = document.getElementById('progressFill');
+            const percentText = document.getElementById('progressPercent');
+            
+            clearInterval(progressInterval);
+            fill.style.width = '100%'; percentText.innerText = '100%';
+            
+            setTimeout(() => {
+                overlay.classList.add('opacity-0');
+                setTimeout(() => { overlay.classList.remove('flex'); overlay.classList.add('hidden'); }, 300);
+            }, 600); 
         }
     </script>
 </body>

@@ -71,6 +71,18 @@
             </div>
         </div>
 
+        <!-- ================= SECTION 2.5: Pending Approval ================= -->
+        <div id="pendingSection" class="hidden glass p-8 rounded-2xl shadow-sm border border-amber-200 text-center animate-fade-in flex flex-col items-center justify-center min-h-[300px] bg-gradient-to-br from-white to-amber-50">
+            <div class="w-20 h-20 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 border-4 border-white shadow-sm">
+                <i class="fa-solid fa-hourglass-half animate-pulse"></i>
+            </div>
+            <h2 class="font-bold text-slate-800 text-xl mb-2">อยู่ระหว่างรออนุมัติ</h2>
+            <p class="text-sm text-slate-500 font-medium">ระบบได้รับข้อมูลลงทะเบียนของคุณแล้ว<br>กรุณารอแอดมินตรวจสอบและอนุมัติสิทธิ์การใช้งานครับ</p>
+            <button onclick="checkOsmRegistration()" class="mt-6 px-6 py-2.5 bg-white border border-amber-200 text-amber-600 font-bold text-sm rounded-xl shadow-sm hover:bg-amber-50 transition flex items-center">
+                <i class="fa-solid fa-rotate-right mr-2"></i> รีเฟรชตรวจสอบสถานะ
+            </button>
+        </div>
+
         <!-- ================= SECTION 3: Main App (ค้นหาและปักหมุด) ================= -->
         <div id="mainSection" class="hidden space-y-4 animate-fade-in">
             
@@ -347,11 +359,20 @@
                 document.getElementById('loadingSection').classList.add('hidden');
                 
                 if (data.isRegistered) {
-                    osmData = data.osmData;
-                    document.getElementById('displayOsmName').innerText = osmData.name;
-                    document.getElementById('displayOsmMoo').innerText = "หมู่ " + osmData.moo;
-                    document.getElementById('mainSection').classList.remove('hidden');
+                    if (data.isApproved) {
+                        // ลงทะเบียนแล้ว และ แอดมินอนุมัติแล้ว
+                        osmData = data.osmData;
+                        document.getElementById('displayOsmName').innerText = osmData.name;
+                        document.getElementById('displayOsmMoo').innerText = "หมู่ " + osmData.moo;
+                        
+                        document.getElementById('pendingSection').classList.add('hidden');
+                        document.getElementById('mainSection').classList.remove('hidden');
+                    } else {
+                        // ลงทะเบียนแล้ว แต่รออนุมัติ
+                        document.getElementById('pendingSection').classList.remove('hidden');
+                    }
                 } else {
+                    // ยังไม่เคยลงทะเบียน
                     document.getElementById('registerSection').classList.remove('hidden');
                 }
             })
@@ -384,14 +405,10 @@
             .then(res => res.json())
             .then(data => {
                 if(data.success) {
-                    showCustomAlert('success', 'ลงทะเบียนสำเร็จ!', 'เข้าสู่ระบบบันทึกพิกัด');
-                    osmData = { name: name, phone: phone, moo: moo };
-                    document.getElementById('displayOsmName').innerText = osmData.name;
-                    document.getElementById('displayOsmMoo').innerText = "หมู่ " + osmData.moo;
-                    
+                    showCustomAlert('success', 'ส่งข้อมูลสำเร็จ!', 'กรุณารอแอดมินอนุมัติการเข้าใช้งาน');
                     document.getElementById('registerSection').classList.add('hidden');
-                    document.getElementById('mainSection').classList.remove('hidden');
-                } else {
+                    document.getElementById('pendingSection').classList.remove('hidden');
+                }else {
                     showCustomAlert('error', 'เกิดข้อผิดพลาด', data.message);
                 }
             })

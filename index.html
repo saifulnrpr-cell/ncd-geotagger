@@ -152,28 +152,53 @@
                 </div>
             </div>
 
-            <!-- กล่องค้นหาผู้ป่วย -->
-            <div class="glass p-5 rounded-2xl shadow-sm border border-slate-200">
-                <h2 class="font-bold text-slate-700 mb-3 flex items-center text-sm border-b border-slate-100 pb-2">
-                    <i class="fa-solid fa-magnifying-glass text-blue-500 mr-2"></i> 1. ค้นหาข้อมูลผู้ป่วย
-                </h2>
-                <div class="flex space-x-2">
-                    <input type="text" id="searchPid" placeholder="กรอกเลข PID หรือ HN..." class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none text-sm transition">
-                    <button id="btnSearch" onclick="searchPatient()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl shadow-md transition font-bold text-sm shrink-0 flex items-center justify-center min-w-[80px]">
-                        <span id="btnSearchText">ค้นหา</span>
-                        <i id="btnSearchSpinner" class="fa-solid fa-circle-notch fa-spin hidden"></i>
-                    </button>
-                </div>
+            <!-- กล่องค้นหาผู้ป่วย (ดีไซน์ใหม่) -->
+            <div class="glass p-5 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden">
+                <!-- ลายน้ำตกแต่งพื้นหลัง -->
+                <div class="absolute -top-10 -right-10 w-32 h-32 bg-blue-50 rounded-full z-0 opacity-70"></div>
+                <div class="absolute top-10 -right-5 w-16 h-16 bg-indigo-50 rounded-full z-0 opacity-70"></div>
                 
-                <!-- ผลลัพธ์การค้นหา -->
-                <div id="patientResultBox" class="hidden mt-4 p-4 bg-slate-50 border border-slate-200 rounded-xl">
-                    <div class="flex items-start space-x-3">
-                        <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-slate-400 shadow-sm shrink-0 border border-slate-100"><i class="fa-solid fa-user"></i></div>
-                        <div>
-                            <p class="text-[10px] font-bold text-slate-400 uppercase">พบข้อมูลผู้ป่วย</p>
-                            <p id="resPtName" class="font-bold text-slate-700 text-sm">-</p>
-                            <p id="resPtAddress" class="text-xs text-slate-500 mt-0.5">-</p>
-                            <p id="resPtDisease" class="text-[10px] text-rose-500 font-semibold mt-1 bg-rose-50 inline-block px-2 py-0.5 rounded border border-rose-100">-</p>
+                <div class="relative z-10">
+                    <h2 class="font-bold text-slate-700 mb-1 flex items-center text-sm">
+                        <div class="w-7 h-7 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 text-blue-600 flex items-center justify-center mr-2 shadow-inner border border-blue-100">
+                            <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                        </div>
+                        1. ค้นหาข้อมูลผู้ป่วย
+                    </h2>
+                    <p class="text-[11px] text-slate-500 mb-4 ml-9">ด้วย <span class="font-bold text-slate-600">เลขบัตร ปชช.</span> หรือ <span class="font-bold text-slate-600">บ้านเลขที่</span></p>
+                    
+                    <div class="flex flex-col space-y-3">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-blue-400">
+                                <i class="fa-regular fa-address-card"></i>
+                            </div>
+                            <input type="text" id="searchQuery" placeholder="กรอกเลข 13 หลัก หรือ บ้านเลขที่..." class="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none text-sm transition shadow-sm font-medium text-slate-700">
+                        </div>
+                        
+                        <div class="flex items-center justify-between">
+                            <div class="text-[10px] text-blue-600 bg-blue-50 px-2.5 py-1.5 rounded-lg border border-blue-100 flex items-center shadow-sm">
+                                <i class="fa-solid fa-map-location-dot mr-1.5 opacity-70"></i>
+                                ค้นหาเฉพาะ <b class="ml-1 text-blue-700" id="searchMooHint">หมู่ -</b>
+                            </div>
+                            <button id="btnSearch" onclick="searchPatient()" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl shadow-md transition font-bold text-sm shrink-0 flex items-center justify-center min-w-[90px]">
+                                <span id="btnSearchText">ค้นหา</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- ผลลัพธ์การค้นหา (ปรับดีไซน์ใหม่) -->
+                    <div id="patientResultBox" class="hidden mt-5 p-4 bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-xl shadow-sm relative overflow-hidden">
+                        <div class="absolute left-0 top-0 bottom-0 w-1 bg-emerald-400"></div>
+                        <div class="flex items-start space-x-3">
+                            <div class="w-9 h-9 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-500 shadow-inner shrink-0 border border-emerald-100">
+                                <i class="fa-solid fa-user-check"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-extrabold text-emerald-500 uppercase tracking-wider mb-0.5">พบข้อมูลผู้ป่วย</p>
+                                <p id="resPtName" class="font-bold text-slate-800 text-sm">-</p>
+                                <p class="text-[11px] text-slate-500 mt-1 font-medium"><i class="fa-solid fa-house mr-1 opacity-50"></i> <span id="resPtAddress">-</span></p>
+                                <p id="resPtDisease" class="text-[10px] text-rose-600 font-bold mt-1.5 bg-rose-50 inline-block px-2 py-0.5 rounded border border-rose-100 shadow-sm">-</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -434,9 +459,14 @@
                         document.getElementById('rejectedScreen').classList.add('flex');
                     } 
                     else {
+                        // อนุมัติแล้ว ให้เข้าหน้าปักหมุดปกติ
                         osmData = data.osmData;
                         document.getElementById('displayOsmName').innerText = osmData.name;
                         document.getElementById('displayOsmMoo').innerText = "หมู่ " + osmData.moo;
+                        
+                        // --- สิ่งที่เพิ่มมาใหม่: อัปเดตป้ายบอกหมู่ในกล่องค้นหา ---
+                        document.getElementById('searchMooHint').innerText = "หมู่ " + osmData.moo;
+                        
                         document.getElementById('mainSection').classList.remove('hidden');
                     }
                 } else {
@@ -486,29 +516,33 @@
 
 
         // =========================================================================
-        // ฟังก์ชัน 4: ค้นหาผู้ป่วย (API Action: verifyPatient)
+        // ฟังก์ชัน 4: ค้นหาผู้ป่วย (ค้นด้วย CID หรือ บ้านเลขที่ + หมู่)
         // =========================================================================
-       function searchPatient() {
-            const pid = document.getElementById('searchPid').value.trim();
-            if (!pid) { showCustomAlert('info', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอกเลข PID หรือ HN ก่อนค้นหา'); return; }
+        function searchPatient() {
+            const query = document.getElementById('searchQuery').value.trim();
+            if (!query) { showCustomAlert('info', 'ข้อมูลไม่ครบถ้วน', 'กรุณากรอกเลขบัตรประชาชน หรือ บ้านเลขที่ ก่อนค้นหา'); return; }
 
-            // เรียก Loading นีออน แทนที่ Spinner ในปุ่มค้นหา
             showProgressLoading('กำลังค้นหาข้อมูลผู้ป่วย...');
             
-            currentPatientPid = "";
+            currentPatientPid = ""; // เคลียร์ PID ปัจจุบัน
             document.getElementById('captureBox').classList.add('opacity-50', 'pointer-events-none');
             document.getElementById('patientResultBox').classList.add('hidden');
 
             fetch(WEB_APP_URL, {
-                method: 'POST', body: JSON.stringify({ action: "verifyPatient", pid: pid })
+                method: 'POST', 
+                body: JSON.stringify({ 
+                    action: "verifyPatient", 
+                    query: query, 
+                    osmMoo: osmData.moo // ส่งหมู่ของ อสม. ไปด้วย
+                })
             })
             .then(res => res.json())
             .then(data => {
-                hideProgressLoading(); // ซ่อน Loading นีออน
+                hideProgressLoading();
 
                 setTimeout(() => {
                     if (data.found) {
-                        currentPatientPid = pid;
+                        currentPatientPid = data.pid; // สำคัญ: เก็บ PID ที่หลังบ้านตอบกลับมา เพื่อใช้เซฟพิกัด
                         document.getElementById('resPtName').innerText = data.name;
                         document.getElementById('resPtAddress').innerText = data.address;
                         document.getElementById('resPtDisease').innerText = data.disease;
@@ -520,7 +554,7 @@
                                     document.getElementById('captureBox').classList.remove('opacity-50', 'pointer-events-none');
                                     document.getElementById('btnSubmitLocText').innerText = "อัปเดตทับข้อมูลเดิม";
                                 },
-                                () => { document.getElementById('searchPid').value = ""; }
+                                () => { document.getElementById('searchQuery').value = ""; }
                             );
                         } else {
                             document.getElementById('patientResultBox').classList.remove('hidden');
@@ -528,13 +562,15 @@
                             document.getElementById('btnSubmitLocText').innerText = "ยืนยันการบันทึกข้อมูล";
                         }
                     } else {
-                        showCustomAlert('error', 'ไม่พบข้อมูล', 'ไม่พบข้อมูลผู้ป่วยรหัสนี้ในระบบ\nกรุณาตรวจสอบตัวเลขอีกครั้ง');
+                        showCustomAlert('error', 'ไม่พบข้อมูล', `ไม่พบผู้ป่วยที่ตรงกับข้อมูลนี้\n(กรุณาตรวจสอบว่าผู้ป่วยอยู่หมู่ ${osmData.moo} หรือไม่)`);
                     }
                 }, 500);
             })
-            .catch(err => hideProgressLoading());
+            .catch(error => {
+                hideProgressLoading();
+                setTimeout(() => showCustomAlert('error', 'ข้อผิดพลาด', 'เกิดปัญหาในการค้นหา กรุณาลองใหม่อีกครั้ง'), 500);
+            });
         }
-
         // =========================================================================
         // ฟังก์ชัน 5: ดึง GPS และ ถ่ายรูป (ทำงานบนฝั่งเครื่องผู้ใช้)
         // =========================================================================
